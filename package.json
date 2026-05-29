@@ -13,5 +13,8 @@
   "devDependencies": {
     "jsdom": "^29.1.1",
     "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.4.0"
   }
 }

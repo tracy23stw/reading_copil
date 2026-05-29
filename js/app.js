@@ -205,25 +205,53 @@ class App {
       const meta = await this.reader.load(arrayBuffer);
       this.bookMeta = meta;
 
-      // 检查是否有分析缓存
+      // 1. 计算文件指纹 (SHA-256)
+      const fileHash = await this.computeHash(arrayBuffer);
+      console.log('[App] 文件指纹 (SHA-256):', fileHash);
+
+      // 2. 检查是否有分析缓存
       let analysisResult = null;
-      if (typeof localforage !== 'undefined') {
-        analysisResult = await localforage.getItem(`cached_analysis_${meta.title}`);
+      try {
+        console.log('[App] 正在检查云端缓存...');
+        const response = await fetch(`/api/cache?hash=${fileHash}`);
+        if (response.ok) {
+          analysisResult = await response.json();
+          console.log('[App] 命中云端缓存！实现全网秒开。');
+        }
+      } catch (err) {
+        console.warn('[App] 检查云端缓存失败, 退回到本地缓存:', err);
+      }
+
+      // 如果云端没有，尝试本地 IndexedDB (向下兼容)
+      if (!analysisResult && typeof localforage !== 'undefined') {
+        analysisResult = await localforage.getItem(`cached_analysis_${fileHash}`);
       }
 
       if (!analysisResult) {
         // 提取全书文本并分析（后台进行，不阻塞阅读）
-        console.log('[App] 开始后台分析...');
+        console.log('[App] 开始调用大模型进行分析...');
         const chapters = await this.reader.extractAllText();
         analysisResult = await this.analyzer.analyze(chapters, meta.title);
         console.log('[App] 分析完成，识别核心人物:', Object.keys(analysisResult.characters).length);
         
-        // 存入缓存，下次秒开
+        // 异步保存到云端
+        try {
+          console.log('[App] 正在将分析结果同步至全网云端...');
+          fetch('/api/cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hash: fileHash, data: analysisResult })
+          });
+        } catch (e) {
+          console.warn('[App] 同步至云端失败:', e);
+        }
+
+        // 存入本地缓存
         if (typeof localforage !== 'undefined') {
-          await localforage.setItem(`cached_analysis_${meta.title}`, analysisResult);
+          await localforage.setItem(`cached_analysis_${fileHash}`, analysisResult);
         }
       } else {
-        console.log('[App] 发现本地分析缓存，直接恢复');
+        console.log('[App] 发现有效缓存，直接恢复数据');
         this.analyzer.characters = analysisResult.characters;
         this.analyzer.relationships = analysisResult.relationships;
         this.analyzer.families = analysisResult.families || [];
@@ -257,6 +285,16 @@ class App {
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  /**
+   * 计算 ArrayBuffer 的 SHA-256 指纹
+   */
+  async computeHash(arrayBuffer) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
   }
 
   /**
