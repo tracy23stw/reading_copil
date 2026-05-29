@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>人物总览 — Reading Copilot</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    
+    <!-- ===== 顶栏 ===== -->
+    <header class="topbar">
+      <span class="topbar__logo">Reading Copilot</span>
+      <div class="topbar__actions">
+        <nav class="topbar__nav">
+          <a href="index.html" class="nav-link">阅读</a>
+          <a href="characters.html" class="nav-link active">人物总览</a>
+          <a href="graph.html" class="nav-link">关系图谱</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ===== 书名 ===== -->
+    <div class="book-title" id="book-title"></div>
+
+    <!-- ===== 空状态 ===== -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state__folder">
+        <div class="folder-icon">
+          <div class="folder-icon__tab"></div>
+          <div class="folder-icon__body"></div>
+        </div>
+      </div>
+      <p class="empty-state__text">请先在阅读页打开一本书</p>
+      <a href="index.html" class="btn-primary" style="text-decoration:none;">返回阅读页</a>
+    </div>
+
+    <!-- ===== 人物卡片网格 ===== -->
+    <div class="characters-grid" id="characters-grid" style="display:none;"></div>
+
+    <!-- ===== 人物详情模态框 ===== -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal" id="modal">
+        <h2 class="modal__title" id="modal-name"></h2>
+        
+        <div class="modal__section">
+          <div class="modal__section-title">基本信息</div>
+          <div id="modal-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+          <div id="modal-tags" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+
+        <div class="modal__section">
+          <div class="modal__section-title">简介</div>
+          <p id="modal-summary" style="line-height:1.75;color:var(--color-text-primary);"></p>
+        </div>
+
+        <div class="modal__section">
+          <div class="modal__section-title">关联人物</div>
+          <ul class="related-list" id="modal-related"></ul>
+        </div>
+
+        <div class="modal__section">
+          <div class="modal__section-title">出场章节</div>
+          <div id="modal-chapters" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 从 sessionStorage 读取分析数据
+    document.addEventListener('DOMContentLoaded', () => {
+      const dataStr = sessionStorage.getItem('readingCopilot_characters');
+      const bookTitle = sessionStorage.getItem('readingCopilot_bookTitle');
+      
+      const emptyState = document.getElementById('empty-state');
+      const grid = document.getElementById('characters-grid');
+      const titleEl = document.getElementById('book-title');
+      
+      if (!dataStr) {
+        emptyState.style.display = 'flex';
+        grid.style.display = 'none';
+        return;
+      }
+
+      const characters = JSON.parse(dataStr);
+      
+      // 显示书名
+      if (bookTitle && titleEl) {
+        titleEl.textContent = `《${bookTitle}》`;
+        titleEl.style.display = 'block';
+      }
+
+      // 隐藏空状态，显示网格
+      emptyState.style.display = 'none';
+      grid.style.display = 'grid';
+
+      // 渲染人物卡片
+      characters.forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        card.innerHTML = `
+          <div class="character-card__name">${char.name}</div>
+          <div class="character-card__count">出场 ${char.count} 次</div>
+          <div class="character-card__summary" style="font-size:12px; color:var(--color-text-secondary); margin-bottom:12px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+            ${char.summary || '暂无简介'}
+          </div>
+          <div class="character-card__tags">
+            ${char.tags.map(t => `<span class="tag tag--blue">${t}</span>`).join('')}
+          </div>
+        `;
+        card.addEventListener('click', () => showModal(char));
+        grid.appendChild(card);
+      });
+
+      // 模态框逻辑
+      const overlay = document.getElementById('modal-overlay');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      function showModal(char) {
+        document.getElementById('modal-name').textContent = char.name;
+        document.getElementById('modal-stats').innerHTML = `
+          <span class="stat-badge stat-badge--blue">出场 ${char.count} 次</span>
+          <span class="stat-badge">${char.firstChapterTitle || ''}</span>
+        `;
+        document.getElementById('modal-tags').innerHTML = 
+          char.tags.map(t => `<span class="tag">${t}</span>`).join('');
+        document.getElementById('modal-summary').textContent = 
+          char.summary || '暂无摘要';
+        document.getElementById('modal-related').innerHTML = 
+          (char.related || []).map(r => `<li><span class="name">${r}</span></li>`).join('') 
+          || '<li style="color:var(--color-text-muted)">暂无</li>';
+        document.getElementById('modal-chapters').innerHTML =
+          (char.chapterAppearances || []).map(c => 
+            `<span class="tag">第${c+1}章</span>`).join('');
+        
+        overlay.classList.add('open');
+      }
+
+      function closeModal() {
+        overlay.classList.remove('open');
+      }
+    });
+  </script>
+</body>
+</html>

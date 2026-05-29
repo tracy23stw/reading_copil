@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Reading Copilot — 阅读伙伴</title>
+  <meta name="description" content="EPUB 阅读伙伴，边读边查人物档案">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    
+    <!-- ===== 顶栏 ===== -->
+    <header class="topbar">
+      <span class="topbar__logo">Reading Copilot</span>
+      
+      <div class="topbar__actions">
+        <!-- 导航 -->
+        <nav class="topbar__nav">
+          <a href="index.html" class="nav-link active">阅读</a>
+          <a href="characters.html" class="nav-link" id="nav-characters">人物总览</a>
+          <a href="graph.html" class="nav-link">关系图谱</a>
+        </nav>
+        
+        <!-- 小文件夹图标 — 选择文件 -->
+        <label class="btn-file" title="选择 EPUB 文件">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <input type="file" id="file-input" accept=".epub">
+        </label>
+      </div>
+    </header>
+
+    <!-- ===== 书名 ===== -->
+    <div id="book-title" class="book-title" style="display:none;"></div>
+
+    <!-- ===== 空状态 — 选择文件 ===== -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state__folder">
+        <div class="folder-icon">
+          <div class="folder-icon__tab"></div>
+          <div class="folder-icon__body"></div>
+        </div>
+      </div>
+      <p class="empty-state__text">打开一本书开始阅读</p>
+      <label class="btn-primary">
+        选择 EPUB 文件
+        <input type="file" id="file-input-upload" accept=".epub">
+      </label>
+      <p class="empty-state__hint">支持 .epub 格式</p>
+    </div>
+
+    <!-- ===== 加载状态 ===== -->
+    <div class="loading" id="loading-state" style="display:none;">
+      <div class="loading__dots">
+        <div class="loading__dot"></div>
+        <div class="loading__dot"></div>
+        <div class="loading__dot"></div>
+      </div>
+      <p class="loading__text">正在解析书籍...</p>
+    </div>
+
+    <!-- ===== 主内容区 ===== -->
+    <div class="main" id="reader-pane" style="display:none;">
+      
+      <!-- 阅读区 -->
+      <div class="reader-pane">
+        <div class="reader-container">
+          <div id="epub-viewer"></div>
+        </div>
+      </div>
+
+      <!-- 人物档案面板 (右侧滑出) -->
+      <aside class="character-panel" id="character-panel">
+        <div class="character-panel__header">
+          <h2 class="character-panel__name" id="panel-name"></h2>
+          <button class="character-panel__close" id="panel-close" aria-label="关闭">×</button>
+        </div>
+        <div class="character-panel__body">
+          <!-- 统计 -->
+          <div class="character-panel__stats" id="panel-stats"></div>
+          
+          <!-- 标签 -->
+          <div class="character-panel__tags" id="panel-tags"></div>
+          
+          <!-- 摘要 -->
+          <div class="character-panel__section-title">简介</div>
+          <p class="character-panel__summary" id="panel-summary"></p>
+          
+          <!-- 关联人物 -->
+          <div class="character-panel__section-title">关联人物</div>
+          <ul class="related-list" id="panel-related"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ===== 翻页控制 ===== -->
+    <div class="pagination" id="pagination" style="display:none;">
+      <button class="pagination__btn" id="btn-prev" aria-label="上一页">‹</button>
+      <div class="pagination__info-container">
+        <span class="chapter-info" id="chapter-info"></span>
+        <input type="number" id="progress-input" class="progress-input" min="0" max="100" value="0">
+        <span class="progress-percent">%</span>
+      </div>
+      <button class="pagination__btn" id="btn-next" aria-label="下一页">›</button>
+    </div>
+
+  </div>
+
+  <!-- ===== 依赖 ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  
+  <!-- ===== 应用代码 ===== -->
+  <script src="js/config.js"></script>
+  <script src="js/llm-client.js"></script>
+  <script src="js/analyzer.js"></script>
+  <script src="js/epub-reader.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
