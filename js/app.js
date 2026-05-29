@@ -40,7 +40,22 @@ class App {
       pagination: document.getElementById('pagination'),
       bookTitle: document.getElementById('book-title'),
       loadingState: document.getElementById('loading-state'),
-      navCharacters: document.getElementById('nav-characters'),
+      navLinks: document.querySelectorAll('.nav-link'),
+      viewReader: document.getElementById('view-reader') || document.getElementById('reader-pane'),
+      viewCharacters: document.getElementById('view-characters'),
+      viewGraph: document.getElementById('view-graph'),
+      charactersGrid: document.getElementById('characters-grid'),
+      emptyStateCharacters: document.getElementById('empty-state-characters'),
+      emptyStateGraph: document.getElementById('empty-state-graph'),
+      
+      // Modal for characters
+      modalOverlay: document.getElementById('modal-overlay'),
+      modalName: document.getElementById('modal-name'),
+      modalStats: document.getElementById('modal-stats'),
+      modalTags: document.getElementById('modal-tags'),
+      modalSummary: document.getElementById('modal-summary'),
+      modalRelated: document.getElementById('modal-related'),
+      modalChapters: document.getElementById('modal-chapters'),
     };
 
     // 绑定事件
@@ -101,13 +116,23 @@ class App {
       }
     });
 
-    // 在点击导航前保存进度
-    const navLinks = document.querySelectorAll('.nav-link');
-    navLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        this.saveCurrentProgress();
+    // 导航栏视图切换
+    this.els.navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const view = link.getAttribute('data-view');
+        if (view) {
+          this.switchView(view);
+        }
       });
     });
+
+    // 关闭人物详情模态框
+    if (this.els.modalOverlay) {
+      this.els.modalOverlay.addEventListener('click', (e) => {
+        if (e.target === this.els.modalOverlay) this.closeCharacterModal();
+      });
+    }
   }
 
   /**
@@ -356,11 +381,138 @@ class App {
   }
 
   /**
+   * 切换视图 (阅读 / 人物总览 / 关系图谱)
+   */
+  switchView(viewName) {
+    // 隐藏所有视图
+    if (this.els.viewReader) this.els.viewReader.style.display = 'none';
+    if (this.els.viewCharacters) this.els.viewCharacters.style.display = 'none';
+    if (this.els.viewGraph) this.els.viewGraph.style.display = 'none';
+    if (this.els.pagination) this.els.pagination.style.display = 'none';
+    
+    // 如果离开阅读页，保存进度
+    if (viewName !== 'reader') {
+      this.saveCurrentProgress();
+    }
+
+    // 更新高亮状态
+    this.els.navLinks.forEach(link => {
+      if (link.getAttribute('data-view') === viewName) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // 只有在没有加载书籍时，才显示主空状态
+    if (!this.reader && viewName === 'reader') {
+      this.showEmpty();
+      return;
+    } else {
+      if (this.els.emptyState) this.els.emptyState.style.display = 'none';
+    }
+
+    if (viewName === 'reader') {
+      if (this.els.viewReader) this.els.viewReader.style.display = 'flex';
+      if (this.els.pagination) this.els.pagination.style.display = 'flex';
+      this.updatePageInfo();
+    } else if (viewName === 'characters') {
+      if (this.els.viewCharacters) this.els.viewCharacters.style.display = 'block';
+      this.renderCharactersView();
+    } else if (viewName === 'graph') {
+      if (this.els.viewGraph) this.els.viewGraph.style.display = 'block';
+      this.renderGraphView();
+    }
+  }
+
+  renderCharactersView() {
+    const characters = this.analyzer.getAllCharacters();
+    if (!characters || characters.length === 0) {
+      if (this.els.emptyStateCharacters) this.els.emptyStateCharacters.style.display = 'flex';
+      if (this.els.charactersGrid) this.els.charactersGrid.style.display = 'none';
+      return;
+    }
+    
+    if (this.els.emptyStateCharacters) this.els.emptyStateCharacters.style.display = 'none';
+    if (this.els.charactersGrid) {
+      this.els.charactersGrid.style.display = 'grid';
+      this.els.charactersGrid.innerHTML = '';
+      
+      characters.forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        card.innerHTML = `
+          <div class="character-card__name">${char.name}</div>
+          <div class="character-card__count">出场 ${char.count} 次</div>
+          <div class="character-card__summary" style="font-size:12px; color:var(--color-text-secondary); margin-bottom:12px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+            ${char.summary || '暂无简介'}
+          </div>
+          <div class="character-card__tags">
+            ${char.tags.map(t => `<span class="tag tag--blue">${t}</span>`).join('')}
+          </div>
+        `;
+        card.addEventListener('click', () => this.showCharacterModal(char));
+        this.els.charactersGrid.appendChild(card);
+      });
+    }
+  }
+
+  showCharacterModal(char) {
+    if (!this.els.modalOverlay) return;
+    this.els.modalName.textContent = char.name;
+    this.els.modalStats.innerHTML = `
+      <span class="stat-badge stat-badge--blue">出场 ${char.count} 次</span>
+      <span class="stat-badge">${char.firstChapterTitle || ''}</span>
+    `;
+    this.els.modalTags.innerHTML = char.tags.map(t => `<span class="tag">${t}</span>`).join('');
+    this.els.modalSummary.textContent = char.summary || '暂无摘要';
+    this.els.modalRelated.innerHTML = (char.related || []).length > 0 
+      ? char.related.map(r => `<li><span class="name">${r}</span></li>`).join('')
+      : '<li style="color:var(--color-text-muted)">暂无</li>';
+    this.els.modalChapters.innerHTML = (char.chapterAppearances || []).map(c => 
+      `<span class="tag">第${c+1}章</span>`).join('');
+    
+    this.els.modalOverlay.classList.add('open');
+  }
+
+  closeCharacterModal() {
+    if (this.els.modalOverlay) this.els.modalOverlay.classList.remove('open');
+  }
+
+  renderGraphView() {
+    const relationships = this.analyzer.relationships || [];
+    const characters = this.analyzer.getAllCharacters() || [];
+    const families = this.analyzer.families || [];
+    
+    if (relationships.length === 0 && characters.length === 0) {
+      if (this.els.emptyStateGraph) {
+        this.els.emptyStateGraph.style.display = 'flex';
+        this.els.emptyStateGraph.innerHTML = '<p class="empty-state__text" style="color:var(--color-text-muted);">大模型分析完成后即可查看关系图谱</p>';
+      }
+      return;
+    }
+    
+    if (this.els.emptyStateGraph) this.els.emptyStateGraph.style.display = 'none';
+    
+    if (typeof renderGraph === 'function') {
+      // Avoid re-rendering completely if already rendered (optimization)
+      const graphContainer = document.getElementById('graph-container');
+      if (graphContainer && graphContainer.innerHTML === '') {
+        renderGraph(relationships, characters, families);
+      } else if (graphContainer) {
+        // Clear and re-render to update nodes if needed
+        graphContainer.innerHTML = '';
+        renderGraph(relationships, characters, families);
+      }
+    }
+  }
+
+  /**
    * UI 状态切换
    */
   showLoading() {
     if (this.els.emptyState) this.els.emptyState.style.display = 'none';
-    if (this.els.readerPane) this.els.readerPane.style.display = 'none';
+    if (this.els.viewReader) this.els.viewReader.style.display = 'none';
     if (this.els.loadingState) this.els.loadingState.style.display = 'flex';
   }
 
@@ -370,17 +522,16 @@ class App {
   }
 
   showReader() {
-    if (this.els.emptyState) this.els.emptyState.style.display = 'none';
+    this.switchView('reader');
     if (this.els.loadingState) this.els.loadingState.style.display = 'none';
-    if (this.els.readerPane) this.els.readerPane.style.display = 'flex';
-    if (this.els.pagination) this.els.pagination.style.display = 'flex';
-    this.updatePageInfo();
   }
 
   showEmpty() {
     if (this.els.emptyState) this.els.emptyState.style.display = 'flex';
     if (this.els.loadingState) this.els.loadingState.style.display = 'none';
-    if (this.els.readerPane) this.els.readerPane.style.display = 'none';
+    if (this.els.viewReader) this.els.viewReader.style.display = 'none';
+    if (this.els.viewCharacters) this.els.viewCharacters.style.display = 'none';
+    if (this.els.viewGraph) this.els.viewGraph.style.display = 'none';
     if (this.els.pagination) this.els.pagination.style.display = 'none';
   }
 }

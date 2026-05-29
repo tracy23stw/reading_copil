@@ -19,9 +19,9 @@
       <div class="topbar__actions">
         <!-- 导航 -->
         <nav class="topbar__nav">
-          <a href="index.html" class="nav-link active">阅读</a>
-          <a href="characters.html" class="nav-link" id="nav-characters">人物总览</a>
-          <a href="graph.html" class="nav-link">关系图谱</a>
+          <a href="#" class="nav-link active" data-view="reader">阅读</a>
+          <a href="#" class="nav-link" data-view="characters">人物总览</a>
+          <a href="#" class="nav-link" data-view="graph">关系图谱</a>
         </nav>
         
         <!-- 小文件夹图标 — 选择文件 -->
@@ -108,10 +108,52 @@
       <button class="pagination__btn" id="btn-next" aria-label="下一页">›</button>
     </div>
 
+    <!-- ===== 人物总览区 (Characters) ===== -->
+    <div class="view-section" id="view-characters" style="display:none; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+      <div class="characters-grid" id="characters-grid" style="display:none;"></div>
+      <div class="empty-state" id="empty-state-characters" style="display:flex;">
+        <p class="empty-state__text">大模型分析完成后即可查看人物档案</p>
+      </div>
+
+      <!-- 人物详情模态框 -->
+      <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+          <h2 class="modal__title" id="modal-name"></h2>
+          <div class="modal__section">
+            <div class="modal__section-title">基本信息</div>
+            <div id="modal-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+            <div id="modal-tags" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+          </div>
+          <div class="modal__section">
+            <div class="modal__section-title">简介</div>
+            <p id="modal-summary" style="line-height:1.75;color:var(--color-text-primary);"></p>
+          </div>
+          <div class="modal__section">
+            <div class="modal__section-title">关联人物</div>
+            <ul class="related-list" id="modal-related"></ul>
+          </div>
+          <div class="modal__section">
+            <div class="modal__section-title">出场章节</div>
+            <div id="modal-chapters" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 关系图谱区 (Graph) ===== -->
+    <div class="view-section graph-container" id="view-graph" style="display:none; width: 100vw; height: calc(100vh - var(--topbar-height)); position: relative;">
+      <div class="empty-state" id="empty-state-graph" style="display:flex; height: 100%; align-items: center; justify-content: center;">
+        <p class="empty-state__text" style="color:var(--color-text-muted);">大模型分析完成后即可查看关系图谱</p>
+      </div>
+      <div id="graph-container" style="width: 100%; height: 100%;"></div>
+      <div id="tooltip" class="graph-tooltip" style="position: absolute; background: var(--color-bg-paper); border: 1px solid var(--color-line); padding: 16px; box-shadow: 4px 4px 0px rgba(143, 144, 150, 0.2); max-width: 280px; display: none; pointer-events: none; z-index: 10;"></div>
+    </div>
+
   </div>
 
   <!-- ===== 依赖 ===== -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   
@@ -120,6 +162,7 @@
   <script src="js/llm-client.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/epub-reader.js"></script>
+  <script src="js/graph-render.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

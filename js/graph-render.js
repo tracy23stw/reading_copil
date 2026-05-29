@@ -2,34 +2,7 @@
  * graph-render.js — D3.js 关系图谱渲染逻辑
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  const relDataStr = sessionStorage.getItem('readingCopilot_relationships');
-  const charDataStr = sessionStorage.getItem('readingCopilot_characters');
-  const famDataStr = sessionStorage.getItem('readingCopilot_families');
-  const bookTitle = sessionStorage.getItem('readingCopilot_bookTitle') || '关系图谱';
-  
-  if (document.getElementById('book-title')) {
-    document.getElementById('book-title').textContent = `《${bookTitle}》关系网络`;
-  }
-
-  if (!relDataStr || !charDataStr) {
-    document.getElementById('graph-container').innerHTML = 
-      '<div style="padding:40px; text-align:center; color:var(--color-text-muted);">请先在阅读页打开一本书，LLM 分析完成后即可查看图谱。</div>';
-    return;
-  }
-
-  const relationships = JSON.parse(relDataStr);
-  const characters = JSON.parse(charDataStr);
-  const families = famDataStr ? JSON.parse(famDataStr) : [];
-  
-  if (relationships.length === 0 && characters.length === 0) {
-    document.getElementById('graph-container').innerHTML = 
-      '<div style="padding:40px; text-align:center; color:var(--color-text-muted);">大模型未识别出明确的人物关系。</div>';
-    return;
-  }
-
-  renderGraph(relationships, characters, families);
-});
+// auto-execution removed for SPA architecture
 
 function renderGraph(relationships, characters, families) {
   const container = document.getElementById('graph-container');
